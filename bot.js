@@ -7142,13 +7142,19 @@ async function prayerLockGroup(groupId) {
 async function prayerUnlockGroup(groupId, prayerName) {
   try {
     await bot.telegram.setChatPermissions(groupId, {
-      can_send_messages:         true, can_send_audios:           true,
-      can_send_documents:        true, can_send_photos:           true,
-      can_send_videos:           true, can_send_video_notes:      true,
-      can_send_voice_notes:      true, can_send_polls:            true,
-      can_send_other_messages:   true, can_add_web_page_previews: true,
-      can_invite_users:          true, can_pin_messages:          true,
-    });
+  can_send_messages:         true,
+  can_send_audios:           false,
+  can_send_documents:        false,
+  can_send_photos:           true,
+  can_send_videos:           false,
+  can_send_video_notes:      false,
+  can_send_voice_notes:      false,
+  can_send_polls:            false,
+  can_send_other_messages:   false,
+  can_add_web_page_previews: false,
+  can_invite_users:          false,
+  can_pin_messages:          false,
+});
     await bot.telegram.sendMessage(
       groupId,
       `${'✅'} Grup telah dibuka kembali. Semoga ibadah <b>${prayerName}</b> kita diterima Allah SWT. 🤲`,
@@ -7179,8 +7185,9 @@ async function sendPrayerReminder(prayerKey, prayerTime, dateKey, allTimings) {
     richTitle('🕌', `JADWAL SHOLAT · ${kotaName}`),
     richTable(['Waktu Sholat', 'Jam'], tableRows),
     richQuote(
-      `${richEscape(hijriStr)} · Sekarang masuk waktu <b>${prayerName}</b>.`,
-      'Jangan lupa sholat.'
+`${richEscape(hijriStr)} · Sekarang telah memasuki waktu <b>${prayerName}</b>.`,
+'🕌 Mari luangkan waktu sejenak untuk menunaikan ibadah sholat.\n\n🔒 Grup otomatis ditutup selama 10 menit agar anggota dapat beribadah dengan khusyuk.\n\n🔓 Grup akan dibuka kembali secara otomatis setelah 10 menit.\n\n✨ Jangan lupa sholat, karena kewajiban ibadah lebih utama.'
+)
     ),
   ].join('\n');
   const mainView = makeView(mainRich);
