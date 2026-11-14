@@ -7187,7 +7187,6 @@ async function sendPrayerReminder(prayerKey, prayerTime, dateKey, allTimings) {
     richQuote(
 `${richEscape(hijriStr)} · Sekarang telah memasuki waktu <b>${prayerName}</b>.`,
 '🕌 Mari luangkan waktu sejenak untuk menunaikan ibadah sholat.\n\n🔒 Grup otomatis ditutup selama 10 menit agar anggota dapat beribadah dengan khusyuk.\n\n🔓 Grup akan dibuka kembali secara otomatis setelah 10 menit.\n\n✨ Jangan lupa sholat, karena kewajiban ibadah lebih utama.'
-)
     ),
   ].join('\n');
   const mainView = makeView(mainRich);
