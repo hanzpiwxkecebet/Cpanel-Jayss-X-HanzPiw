@@ -1,0 +1,8 @@
+# Jangan pernah push file-file ini ke GitHub — berisi token/secret & data live
+config.js
+KeyHanzPiw.json
+.env
+database/
+node_modules/
+*.log
+*.backup.js
