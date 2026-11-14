@@ -1,11 +1,9 @@
 {
-  "version": "v2.5.4",
+  "version": "v2.5.3",
   "date": "2026-11-14",
   "changelog": [
     "Fix: auto-delete skip server yang masih online/running",
     "Fix: panel Python tidak lagi dibuat sebagai Node.js",
-    "Fix: pe dan E stub ditambahkan ke deps features.js / features2.js",
-    "Optimasi: /harga index calculation lebih efisien",
     "New: command /hargaup - daftar harga upgrade role otomatis dari /harga"
   ]
 }
