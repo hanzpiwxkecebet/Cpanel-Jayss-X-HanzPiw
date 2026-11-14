@@ -1236,7 +1236,25 @@ function htmlToBlocks(html) {
     } else if ((m = /^<details[^>]*>([\s\S]*?)<\/details>/i.exec(rest))) {
       const sumM = /<summary[^>]*>([\s\S]*?)<\/summary>/i.exec(m[1]);
       if (sumM) {
-        const body = m[1].slice(sumM.index + sumM[0].length).replace(/<\/?p[^>]*>/gi, '').trim();
+        let body = m[1].slice(sumM.index + sumM[0].length).replace(/<\/?p[^>]*>/gi, '').trim();
+
+        // FIX: jika body mengandung <table> (mis. /hargaup), ubah dulu jadi teks
+        // per baris dengan pemisah kolom, supaya parseInlineRich tidak menempelkan
+        // semua sel jadi satu teks panjang tanpa spasi/newline (bug teks nyambung).
+        body = body.replace(/<table[^>]*>([\s\S]*?)<\/table>/gi, (_t, tableInner) => {
+          const rowsOut = [];
+          const trRe = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+          let trM;
+          while ((trM = trRe.exec(tableInner)) !== null) {
+            const cellsOut = [];
+            const cellRe = /<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi;
+            let cM;
+            while ((cM = cellRe.exec(trM[1])) !== null) cellsOut.push(cM[1].trim());
+            if (cellsOut.length) rowsOut.push(cellsOut.join(' │ '));
+          }
+          return rowsOut.join('<br>');
+        });
+
         const sumParsed = parseInlineRich(sumM[1]);
         const bodyStr = body ? body.replace(/<br\s*\/?>/gi, '\n') : '';
         const bodyParsed = bodyStr ? parseInlineRich(bodyStr) : null;
