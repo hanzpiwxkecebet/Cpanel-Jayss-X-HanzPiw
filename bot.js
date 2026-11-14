@@ -13,7 +13,8 @@ const DB_DIR = path.join(__dirname, 'database');
 const PRAYER_DB_FILE = path.join(DB_DIR, 'prayer.json');
 const CONFIG_OVERRIDE_FILE = path.join(DB_DIR, 'config_override.json');
 const FIXED_BACKUP_CHAT_ID = config.FIXED_BACKUP_CHAT_ID
-const BLACKLIST_FILE = path.join(DB_DIR, 'blacklist.json');
+const BLACKLIST_FILE     = path.join(DB_DIR, 'blacklist.json');
+const JOIN_WARNS_FILE    = path.join(DB_DIR, 'join_warns.json');
 const STATS_FILE = path.join(DB_DIR, 'panel_stats.json');
 const OFFLINE_TRACKER_FILE = path.join(DB_DIR, 'offline_tracker.json');
 const GUEST_PANEL_FILE     = path.join(DB_DIR, 'guest_panels.json');
@@ -3151,6 +3152,50 @@ function isBlacklisted(userId) {
   return readBlacklist().includes(String(userId));
 }
 
+// ─── Join-warn helpers (auto-blacklist after 5x ignore) ───────────────────────
+function readJoinWarns() {
+  return fbRead(JOIN_WARNS_FILE, {});
+}
+function saveJoinWarns(data) {
+  fbWrite(JOIN_WARNS_FILE, data);
+}
+function incrementJoinWarn(userId) {
+  const warns = readJoinWarns();
+  const uid = String(userId);
+  if (!warns[uid]) warns[uid] = { count: 0, autoBlacklisted: false };
+  warns[uid].count += 1;
+  saveJoinWarns(warns);
+  return warns[uid].count;
+}
+function getJoinWarnCount(userId) {
+  const warns = readJoinWarns();
+  return warns[String(userId)]?.count || 0;
+}
+function isAutoJoinBlacklisted(userId) {
+  const warns = readJoinWarns();
+  return Boolean(warns[String(userId)]?.autoBlacklisted);
+}
+function autoJoinBlacklistUser(userId) {
+  const uid = String(userId);
+  const list = readBlacklist();
+  if (!list.includes(uid)) { list.push(uid); saveBlacklist(list); }
+  const warns = readJoinWarns();
+  if (!warns[uid]) warns[uid] = { count: 5 };
+  warns[uid].autoBlacklisted = true;
+  warns[uid].blacklistedAt   = new Date().toISOString();
+  saveJoinWarns(warns);
+}
+function autoJoinUnblacklistUser(userId) {
+  const uid  = String(userId);
+  const list = readBlacklist();
+  const idx  = list.indexOf(uid);
+  if (idx > -1) { list.splice(idx, 1); saveBlacklist(list); }
+  const warns = readJoinWarns();
+  delete warns[uid];
+  saveJoinWarns(warns);
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 function getMaintenanceStatus() {
   return fbRead(MAINTENANCE_FILE, { on: false }).on === true;
 }
@@ -4541,23 +4586,55 @@ bot.use(async (ctx, next) => {
     if (ctx.callbackQuery?.data?.startsWith('checkjoin_')) return next();
     if (ctx.callbackQuery?.data?.startsWith('confirmstart_')) return next();
 
+    // User yang sudah auto-blacklisted karena tidak join — ditangani oleh middleware blacklist
+    if (isAutoJoinBlacklisted(ctx.from.id)) return next();
+
     if (ctx.message || ctx.callbackQuery) {
       const notJoined = await checkMembership(ctx.from.id);
       if (notJoined.length > 0) {
-        const userId      = ctx.from.id;
-        const chatId      = ctx.chat?.id;
-        const chatType    = ctx.chat?.type;
+        const userId   = ctx.from.id;
+        const chatId   = ctx.chat?.id;
+        const chatType = ctx.chat?.type;
 
         if (chatId && (chatType === 'group' || chatType === 'supergroup') && ctx.message) {
           try { await muteUserInChat(chatId, userId); } catch (_) {}
         }
 
+        // Tambah warn count
+        const warnCount = incrementJoinWarn(userId);
+
         const channelList = notJoined.map(ch => `• <a href="${ch.link}">${htmlEscape(ch.name)}</a>`).join('\n');
 
+        // Warn ke-5: auto-blacklist + kirim PM sekali, lalu silent
+        if (warnCount >= 5) {
+          autoJoinBlacklistUser(userId);
+          const pmText = `⛔ <b>Kamu Telah Diblacklist!</b>\n\n` +
+            `Kamu mengabaikan pesan wajib join sebanyak <b>5 kali</b>.\n\n` +
+            `🔗 Join semua channel berikut lalu tekan tombol untuk membuka akses:\n\n` +
+            `${channelList}`;
+          // Kirim ke PM user — cukup sekali
+          try {
+            await bot.telegram.sendMessage(userId, pmText, {
+              parse_mode: 'HTML',
+              disable_web_page_preview: true,
+              reply_markup: {
+                inline_keyboard: [[
+                  { text: `✅ Saya Sudah Join`, callback_data: `checkjoin_${userId}_0` }
+                ]]
+              }
+            });
+          } catch (_) {}
+          // Jawab cbQuery kosong supaya spinner Telegram berhenti
+          if (ctx.callbackQuery) { try { await ctx.answerCbQuery(); } catch (_) {} }
+          return; // Silent di chat
+        }
+
+        // Warn ke-1 s/d ke-4: pesan biasa
         const text = `${'⚠️'} <b>Wajib Join Channel!</b>\n\n` +
           `Kamu harus join semua channel berikut untuk menggunakan bot:\n\n` +
           `${channelList}\n\n` +
-          `${'✅'} Setelah join semua channel, tekan tombol di bawah.`;
+          `${'✅'} Setelah join semua channel, tekan tombol di bawah.\n\n` +
+          `<i>Peringatan ${warnCount}/5 — diabaikan 5x akan diblacklist otomatis.</i>`;
 
         const replyOpts = {
           parse_mode: 'HTML',
@@ -4601,6 +4678,15 @@ bot.use(async (ctx, next) => {
   }
 
   if (ctx.from?.id && !isOwner(ctx.from.id) && isBlacklisted(ctx.from.id)) {
+    // Auto-blacklist karena tidak join channel → bisa self-recover setelah join
+    if (isAutoJoinBlacklisted(ctx.from.id)) {
+      // Izinkan tombol checkjoin_ lewat supaya handler-nya bisa unblacklist
+      if (ctx.callbackQuery?.data?.startsWith('checkjoin_')) return next();
+      // Silent total — tidak respon apapun
+      if (ctx.callbackQuery) { try { await ctx.answerCbQuery(); } catch (_) {} }
+      return;
+    }
+    // Blacklist manual oleh owner
     if (ctx.callbackQuery) {
       try { await ctx.answerCbQuery('⛔ Kamu diblokir dari bot ini.', { show_alert: true }); } catch (_) {}
     } else if (ctx.message) {
@@ -4812,6 +4898,21 @@ bot.action(/^checkjoin_(\d+)_(-?\d+)$/, async (ctx) => {
     if (notJoined.length > 0) {
       const remaining = notJoined.map(ch => ch.name).join(', ');
       return ctx.answerCbQuery(`⚠️ Masih belum join: ${remaining}`, { show_alert: true });
+    }
+
+    // Jika user ini auto-blacklisted karena tidak join → hapus blacklist otomatis
+    if (isAutoJoinBlacklisted(ctx.from.id)) {
+      autoJoinUnblacklistUser(ctx.from.id);
+      const firstName = htmlEscape(ctx.from.first_name || 'User');
+      try {
+        await ctx.editMessageText(
+          `✅ <b>Akses Dipulihkan!</b>\n\n` +
+          `${firstName} berhasil join semua channel.\n` +
+          `🎉 Blacklist dihapus — selamat menggunakan bot!`,
+          { parse_mode: 'HTML' }
+        );
+      } catch (_) {}
+      return ctx.answerCbQuery(`✅ Berhasil! Blacklist dihapus. Selamat menggunakan bot!`, { show_alert: true });
     }
 
     const ok = await unmuteUserInChat(chatId, ctx.from.id);
