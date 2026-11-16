@@ -613,34 +613,34 @@ async function handleSetApiKey(ctx) {
 
   const raw = (ctx.message?.text || '').trim().replace(/^\/\S+\s*/, '');
 
-  const idx1 = raw.indexOf(',');
+  const idx1 = raw.indexOf('|');
   if (idx1 === -1) {
     return ctx.reply(
       '❌ Format salah.\n' +
-      'Gunakan: <code>/setapikey server,domain,ptla,pltc</code>\n' +
-      'Contoh: <code>/setapikey v1,https://panel.com,ptla_xxx,ptlc_xxx</code>',
+      'Gunakan: <code>/setapikey server|domain|ptla|pltc</code>\n' +
+      'Contoh: <code>/setapikey v1|https://panel.com|ptla_xxx|ptlc_xxx</code>',
       { parse_mode: 'HTML' }
     );
   }
   const vKey  = raw.slice(0, idx1).trim().toLowerCase();
   const rest1 = raw.slice(idx1 + 1).trim();
 
-  const idx2 = rest1.indexOf(',');
+  const idx2 = rest1.indexOf('|');
   if (idx2 === -1) {
     return ctx.reply(
       '❌ Format salah — kurang argumen <code>ptla</code>.\n' +
-      'Gunakan: <code>/setapikey server,domain,ptla,pltc</code>',
+      'Gunakan: <code>/setapikey server|domain|ptla|pltc</code>',
       { parse_mode: 'HTML' }
     );
   }
   const domain = rest1.slice(0, idx2).trim();
   const rest2  = rest1.slice(idx2 + 1).trim();
 
-  const idx3 = rest2.indexOf(',');
+  const idx3 = rest2.indexOf('|');
   if (idx3 === -1) {
     return ctx.reply(
       '❌ Format salah — kurang argumen <code>pltc</code>.\n' +
-      'Gunakan: <code>/setapikey server,domain,ptla,pltc</code>',
+      'Gunakan: <code>/setapikey server|domain|ptla|pltc</code>',
       { parse_mode: 'HTML' }
     );
   }
@@ -1680,7 +1680,7 @@ async function sendHelp(ctx, options = {}) {
     '/listserver · /listuser · /pterotest',
     '/delsrvoff · /delusroff · /delsrvall',
     '/autodel                    — toggle auto delete server tiap 6 jam',
-    '/setapikey server,domain,ptla,pltc',
+    '/setapikey server|domain|ptla|pltc',
     '/lockunli · /unlockunli     — lock panel UNLI',
     '/lockadp  · /unlockadp     — lock panel ADP',
     '/autocpu                    — manajemen auto CPU',
