@@ -2,6 +2,6 @@
   "version": "v2.5.4",
   "date": "2026-11-16",
   "changelog": [
-    "Update: Separator /setapikey diubah dari koma (,) menjadi pipe (|)"
+    "Update: Separator /setapikey diubah dari koma (,) menjadi (|)"
   ]
 }
