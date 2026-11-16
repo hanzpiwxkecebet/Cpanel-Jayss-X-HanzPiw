@@ -2823,7 +2823,7 @@ async function handlePanelCommandForServer(ctx, planKey, serverIndex) {
           `<blockquote><b>✅ Data akun ( Email & Password ) telah dikirim ke Private Chat Anda</b>`,
           '</blockquote>'
         ].join('\n');
-        await ctx.reply(notifCaption, { parse_mode: 'HTML' });
+        await ctx.reply(notifCaption, { parse_mode: 'HTML' }).catch(() => {});
       } catch (_) {
         await ctx.reply(
           '⚠️ <b>Panel berhasil dibuat!</b>\n\n'
@@ -2909,7 +2909,7 @@ async function handleAdminPanelCommandForServer(ctx, serverIndex) {
           '',
           `<blockquote><b>${'✅'} Data akun ( Email &amp; Password ) telah dikirim ke Private Chat Anda</b></blockquote>`,
         ].join('\n');
-        await ctx.reply(adminNotifCaption, { parse_mode: 'HTML' });
+        await ctx.reply(adminNotifCaption, { parse_mode: 'HTML' }).catch(() => {});
       } catch (_) {
         await ctx.reply(
           '⚠️ <b>Panel berhasil dibuat!</b>\n\n'
@@ -4036,7 +4036,7 @@ async function handlePanelCommand(ctx, planKey) {
           `<blockquote><b>✅ Data akun ( Email & Password ) telah dikirim ke Private Chat Anda</b>`,
           '</blockquote>'
         ].join('\n');
-        await ctx.reply(notifCaption, { parse_mode: 'HTML' });
+        await ctx.reply(notifCaption, { parse_mode: 'HTML' }).catch(() => {});
       } catch (_) {
         await ctx.reply(
           '⚠️ <b>Panel berhasil dibuat!</b>\n\n'
@@ -4113,7 +4113,7 @@ async function handleAdminPanelCommand(ctx) {
           '',
           `<blockquote><b>${'✅'} Data akun ( Email &amp; Password ) telah dikirim ke Private Chat Anda</b></blockquote>`,
         ].join('\n');
-        await ctx.reply(adminNotifCaption, { parse_mode: 'HTML' });
+        await ctx.reply(adminNotifCaption, { parse_mode: 'HTML' }).catch(() => {});
       } catch (_) {
         await ctx.reply(
           '⚠️ <b>Panel berhasil dibuat!</b>\n\n'
